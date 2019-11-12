@@ -46,6 +46,8 @@ canned_acls = [
 
 cached_s3 = None
 
+results = {}
+
 def s3():
     # memoize
     global cached_s3
@@ -75,11 +77,23 @@ def perform(check):
 
     with indent(2):
         if check.status == 'passed':
-            puts(colored.green('✔ ' + check.name + ' ' + check.pass_message))
+            #puts(colored.green('✔ ' + check.name + ' ' + check.pass_message))
+
+            #Custom Addition
+            results.update({check.name : check.pass_message})
+            #print(json.dumps({check.name : check.pass_message}))
         elif check.status == 'failed':
-            puts(colored.red('✘ ' + check.name + ' ' + check.fail_message))
+            #puts(colored.red('✘ ' + check.name + ' ' + check.fail_message))
+
+            #Custom Addition
+            results.update({check.name : check.fail_message})
+            #print(json.dumps({check.name : check.fail_message}))
         else:
-            puts(colored.red('✘ ' + check.name + ' access denied'))
+            #puts(colored.red('✘ ' + check.name + ' access denied'))
+
+            #Custom Addition
+            results.update({check.name : "access denied"})
+            #print(json.dumps({check.name : "access denied"}))
 
     return check
 
@@ -399,8 +413,9 @@ def cli():
 @click.option('--sns-topic', help='Send SNS notification for failures')
 def scan(buckets, log_bucket=None, log_prefix=None, skip_logging=False, skip_versioning=False, skip_default_encryption=False, default_encryption=True, sns_topic=None):
     checks = []
+    output = []
     for bucket in fetch_buckets(buckets):
-        puts(bucket.name)
+        #puts(bucket.name)
 
         checks.append(perform(AclCheck(bucket)))
 
@@ -415,7 +430,14 @@ def scan(buckets, log_bucket=None, log_prefix=None, skip_logging=False, skip_ver
         if not skip_default_encryption:
             checks.append(perform(EncryptionCheck(bucket)))
 
+        #Custom Addition
+        global results
+        output.append({"bucket" : bucket.name, "results" : results})
+
         puts()
+
+    #Custom Addition
+    print(json.dumps(output))
 
     failed_checks = [c for c in checks if c.status != 'passed']
     if any(failed_checks):
